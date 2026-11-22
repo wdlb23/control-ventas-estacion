@@ -19,7 +19,7 @@ android.permissions = INTERNET
 
 android.api = 36
 android.minapi = 24
-android.ndk = 28c
+android.ndk = 25b
 android.ndk_api = 24
 android.accept_sdk_license = True
 
