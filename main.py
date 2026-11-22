@@ -9,7 +9,6 @@ from kivy.metrics import dp
 from kivy.core.window import Window
 from kivy.graphics import Color, RoundedRectangle
 from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.gridlayout import GridLayout
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
@@ -17,16 +16,15 @@ from kivy.uix.button import Button
 from kivy.uix.spinner import Spinner
 from kivy.uix.popup import Popup
 
-
-# COLORES DE LA INTERFAZ
-AZUL_FONDO = (0.035, 0.055, 0.10, 1)
-AZUL_TARJETA = (0.075, 0.105, 0.17, 1)
-NARANJA = (1, 0.43, 0.12, 1)
+# COLORES
+FONDO = (0.035, 0.055, 0.10, 1)
+TARJETA = (0.075, 0.105, 0.17, 1)
+NARANJA = (1.0, 0.43, 0.12, 1)
 BLANCO = (0.95, 0.96, 0.98, 1)
 GRIS = (0.68, 0.73, 0.81, 1)
-VERDE = (0.18, 0.68, 0.43, 1)
+VERDE = (0.16, 0.55, 0.36, 1)
 
-Window.clearcolor = AZUL_FONDO
+Window.clearcolor = FONDO
 
 
 class ControlVentasApp(App):
@@ -36,8 +34,8 @@ class ControlVentasApp(App):
         self.parqueos = []
         self.ultimo_calculo = None
         self.cierre_guardado = False
+        self.tarjeta_actual = None
 
-        # Base de datos local
         self.db_path = os.path.join(
             self.user_data_dir,
             "control_ventas.db"
@@ -45,7 +43,6 @@ class ControlVentasApp(App):
 
         self.inicializar_bd()
 
-        # Contenedor desplazable
         scroll = ScrollView(
             do_scroll_x=False,
             bar_width=dp(5)
@@ -68,37 +65,31 @@ class ControlVentasApp(App):
         encabezado = BoxLayout(
             orientation="vertical",
             size_hint_y=None,
-            height=dp(105),
-            spacing=dp(5)
+            height=dp(88),
+            spacing=dp(4)
         )
 
-        encabezado.add_widget(
-            Label(
-                text="[b]CONTROL DE VENTAS[/b]",
-                markup=True,
-                font_size="25sp",
-                color=NARANJA,
-                halign="left",
-                valign="middle"
-            )
-        )
+        encabezado.add_widget(Label(
+            text="[b]CONTROL DE VENTAS[/b]",
+            markup=True,
+            font_size="25sp",
+            color=NARANJA,
+            halign="left",
+            valign="middle"
+        ))
 
-        encabezado.add_widget(
-            Label(
-                text="Registro y cierre de ventas",
-                font_size="14sp",
-                color=GRIS,
-                halign="left",
-                valign="middle"
-            )
-        )
+        encabezado.add_widget(Label(
+            text="Registro y cierre de ventas",
+            font_size="14sp",
+            color=GRIS,
+            halign="left",
+            valign="middle"
+        ))
 
         self.contenedor.add_widget(encabezado)
 
         # LECTURAS INICIALES
-        self.crear_seccion(
-            "LECTURAS INICIALES - GASOLINA"
-        )
+        self.crear_seccion("LECTURAS INICIALES - GASOLINA")
 
         for i in range(1, 5):
             self.agregar_campo(
@@ -106,9 +97,7 @@ class ControlVentasApp(App):
                 f"eg{i}"
             )
 
-        self.crear_seccion(
-            "LECTURAS INICIALES - DIESEL"
-        )
+        self.crear_seccion("LECTURAS INICIALES - DIESEL")
 
         for i in range(1, 3):
             self.agregar_campo(
@@ -117,9 +106,7 @@ class ControlVentasApp(App):
             )
 
         # LECTURAS FINALES
-        self.crear_seccion(
-            "LECTURAS FINALES - GASOLINA"
-        )
+        self.crear_seccion("LECTURAS FINALES - GASOLINA")
 
         for i in range(1, 5):
             self.agregar_campo(
@@ -127,9 +114,7 @@ class ControlVentasApp(App):
                 f"sg{i}"
             )
 
-        self.crear_seccion(
-            "LECTURAS FINALES - DIESEL"
-        )
+        self.crear_seccion("LECTURAS FINALES - DIESEL")
 
         for i in range(1, 3):
             self.agregar_campo(
@@ -157,8 +142,8 @@ class ControlVentasApp(App):
 
         self.lista_parqueos = BoxLayout(
             orientation="vertical",
-            size_hint_y=None,
-            spacing=dp(8)
+            spacing=dp(8),
+            size_hint_y=None
         )
 
         self.lista_parqueos.bind(
@@ -183,27 +168,25 @@ class ControlVentasApp(App):
         # DESCUENTOS
         self.crear_seccion("DESCUENTOS")
 
-        self.contenedor.add_widget(
-            Label(
-                text="¿Hubo descuento?",
-                color=BLANCO,
-                size_hint_y=None,
-                height=dp(30),
-                halign="left"
-            )
-        )
+        self.tarjeta_actual.add_widget(Label(
+            text="¿Hubo descuento?",
+            color=GRIS,
+            size_hint_y=None,
+            height=dp(28),
+            halign="left"
+        ))
 
         self.respuesta_descuento = Spinner(
             text="No",
             values=("No", "Si"),
             size_hint_y=None,
-            height=dp(48),
+            height=dp(46),
             background_normal="",
-            background_color=AZUL_TARJETA,
+            background_color=(0.12, 0.16, 0.23, 1),
             color=BLANCO
         )
 
-        self.contenedor.add_widget(
+        self.tarjeta_actual.add_widget(
             self.respuesta_descuento
         )
 
@@ -212,44 +195,42 @@ class ControlVentasApp(App):
             "descuento"
         )
 
-        # BOTÓN CALCULAR
+        # CALCULAR
         self.boton(
             "CALCULAR VENTAS",
             self.calcular,
-            color=NARANJA
+            NARANJA
         )
 
-        # RESULTADO
+        # RESUMEN
         self.crear_seccion("RESUMEN DEL CIERRE")
 
         self.resultado = Label(
             text="Aquí aparecerá el resumen de ventas.",
             color=BLANCO,
-            font_size="15sp",
+            font_size="14sp",
             halign="left",
             valign="top",
             size_hint_y=None,
-            height=dp(100)
+            height=dp(110)
         )
 
         self.resultado.bind(
-            width=self.actualizar_ancho_resultado
-        )
-
-        self.resultado.bind(
+            width=self.actualizar_ancho_resultado,
             texture_size=self.actualizar_alto_resultado
         )
 
-        self.contenedor.add_widget(self.resultado)
+        self.tarjeta_actual.add_widget(
+            self.resultado
+        )
 
-        # GUARDAR
+        # GUARDAR E HISTORIAL
         self.boton(
             "GUARDAR CIERRE",
             self.guardar_cierre,
-            color=VERDE
+            VERDE
         )
 
-        # HISTORIAL
         self.boton(
             "VER HISTORIAL",
             self.ver_historial
@@ -260,7 +241,6 @@ class ControlVentasApp(App):
     # BASE DE DATOS
     def inicializar_bd(self):
         conexion = sqlite3.connect(self.db_path)
-
         cursor = conexion.cursor()
 
         cursor.execute("""
@@ -274,7 +254,7 @@ class ControlVentasApp(App):
         conexion.commit()
         conexion.close()
 
-    # SECCIONES VISUALES
+    # SECCIONES
     def crear_seccion(self, titulo):
         tarjeta = BoxLayout(
             orientation="vertical",
@@ -283,8 +263,12 @@ class ControlVentasApp(App):
             size_hint_y=None
         )
 
+        tarjeta.bind(
+            minimum_height=tarjeta.setter("height")
+        )
+
         with tarjeta.canvas.before:
-            Color(*AZUL_TARJETA)
+            Color(*TARJETA)
             fondo = RoundedRectangle(
                 pos=tarjeta.pos,
                 size=tarjeta.size,
@@ -293,23 +277,16 @@ class ControlVentasApp(App):
 
         tarjeta.bind(
             pos=lambda instancia, valor:
-            setattr(fondo, "pos", valor)
-        )
-
-        tarjeta.bind(
+            setattr(fondo, "pos", valor),
             size=lambda instancia, valor:
             setattr(fondo, "size", valor)
-        )
-
-        tarjeta.bind(
-            minimum_height=tarjeta.setter("height")
         )
 
         etiqueta = Label(
             text=f"[b]{titulo}[/b]",
             markup=True,
             color=NARANJA,
-            font_size="16sp",
+            font_size="15sp",
             halign="left",
             valign="middle",
             size_hint_y=None,
@@ -317,18 +294,17 @@ class ControlVentasApp(App):
         )
 
         tarjeta.add_widget(etiqueta)
-
         self.contenedor.add_widget(tarjeta)
 
         self.tarjeta_actual = tarjeta
 
-    # CAMPOS DE ENTRADA
+    # CAMPOS
     def agregar_campo(self, nombre, clave):
         caja = BoxLayout(
             orientation="vertical",
             spacing=dp(4),
             size_hint_y=None,
-            height=dp(76)
+            height=dp(74)
         )
 
         etiqueta = Label(
@@ -346,7 +322,7 @@ class ControlVentasApp(App):
             multiline=False,
             input_filter="float",
             size_hint_y=None,
-            height=dp(45),
+            height=dp(44),
             font_size="16sp",
             padding=[dp(12), dp(10)],
             background_normal="",
@@ -361,7 +337,6 @@ class ControlVentasApp(App):
         caja.add_widget(entrada)
 
         self.tarjeta_actual.add_widget(caja)
-
         self.campos[clave] = entrada
 
     # BOTONES
@@ -382,7 +357,6 @@ class ControlVentasApp(App):
         )
 
         btn.bind(on_press=funcion)
-
         self.contenedor.add_widget(btn)
 
         return btn
@@ -391,17 +365,22 @@ class ControlVentasApp(App):
     def obtener(self, clave):
         valor = self.campos[clave].text.strip()
 
-        if valor == "":
-            return 0
+        if not valor:
+            return 0.0
 
         return float(valor)
 
-    # CREAR CAMPOS DE PARQUEOS
+    # PARQUEOS
     def crear_parqueos(self, instancia):
         try:
-            cantidad = int(
-                self.obtener("cantidad_parqueos")
+            cantidad_valor = self.obtener(
+                "cantidad_parqueos"
             )
+
+            if not cantidad_valor.is_integer():
+                raise ValueError
+
+            cantidad = int(cantidad_valor)
 
             if cantidad < 0 or cantidad > 100:
                 raise ValueError
@@ -410,12 +389,11 @@ class ControlVentasApp(App):
             self.parqueos = []
 
             for i in range(1, cantidad + 1):
-
                 caja = BoxLayout(
                     orientation="vertical",
                     spacing=dp(4),
                     size_hint_y=None,
-                    height=dp(76)
+                    height=dp(72)
                 )
 
                 etiqueta = Label(
@@ -424,7 +402,7 @@ class ControlVentasApp(App):
                     font_size="14sp",
                     halign="left",
                     size_hint_y=None,
-                    height=dp(25)
+                    height=dp(24)
                 )
 
                 entrada = TextInput(
@@ -432,7 +410,7 @@ class ControlVentasApp(App):
                     multiline=False,
                     input_filter="float",
                     size_hint_y=None,
-                    height=dp(45),
+                    height=dp(44),
                     font_size="16sp",
                     background_normal="",
                     background_active="",
@@ -452,67 +430,72 @@ class ControlVentasApp(App):
                 f"Se crearon {cantidad} campos de parqueo."
             )
 
-        except ValueError:
+        except (ValueError, TypeError):
             self.mensaje(
                 "Error",
-                "Ingrese una cantidad válida entre 0 y 100."
+                "Ingrese una cantidad entera válida entre 0 y 100."
             )
 
-    # ACTUALIZAR TAMAÑO DEL RESULTADO
+    # TAMAÑO DEL RESULTADO
     def actualizar_ancho_resultado(self, instancia, ancho):
         instancia.text_size = (ancho, None)
 
     def actualizar_alto_resultado(self, instancia, tamano):
         instancia.height = max(
-            dp(100),
-            tamano[1] + dp(15)
+            dp(110),
+            tamano[1] + dp(18)
         )
 
     # CALCULAR VENTAS
     def calcular(self, instancia):
         try:
-            gasolina = 0
-            diesel = 0
-
-            # GASOLINA
-            for i in range(1, 5):
-                gasolina += abs(
+            gasolina = sum(
+                abs(
                     self.obtener(f"sg{i}") -
                     self.obtener(f"eg{i}")
                 )
+                for i in range(1, 5)
+            )
 
-            # DIESEL
-            for i in range(1, 3):
-                diesel += abs(
+            diesel = sum(
+                abs(
                     self.obtener(f"sd{i}") -
                     self.obtener(f"ed{i}")
                 )
+                for i in range(1, 3)
+            )
 
             total_gasolina = gasolina * 15790
             total_diesel = diesel * 10750
 
             aditivos = self.obtener("aditivos")
 
-            cantidad_parqueos = int(
-                self.obtener("cantidad_parqueos")
+            cantidad_valor = self.obtener(
+                "cantidad_parqueos"
             )
+
+            if not cantidad_valor.is_integer():
+                raise ValueError
+
+            cantidad_parqueos = int(cantidad_valor)
 
             if cantidad_parqueos != len(self.parqueos):
                 self.mensaje(
                     "Parqueos",
-                    "Primero cree los campos de parqueos."
+                    "Primero pulse CREAR CAMPOS DE PARQUEOS "
+                    "para generar la cantidad indicada."
                 )
                 return
 
-            total_parqueos = sum(
-                float(p.text.strip()) if p.text.strip() else 0
-                for p in self.parqueos
-            )
+            valores_parqueos = []
 
-            valores_parqueos = [
-                float(p.text.strip()) if p.text.strip() else 0
-                for p in self.parqueos
-            ]
+            for campo in self.parqueos:
+                texto = campo.text.strip()
+                valores_parqueos.append(
+                    float(texto) if texto else 0.0
+                )
+
+            total_parqueos = sum(valores_parqueos)
 
             total_ventas = (
                 total_gasolina +
@@ -524,7 +507,7 @@ class ControlVentasApp(App):
             monedas = self.obtener("monedas")
             datafono = self.obtener("datafono")
 
-            descuento = 0
+            descuento = 0.0
 
             if self.respuesta_descuento.text == "Si":
                 descuento = self.obtener("descuento")
@@ -536,24 +519,30 @@ class ControlVentasApp(App):
                 descuento
             )
 
-            # GUARDAR TODOS LOS DATOS DEL CIERRE
+            # DATOS QUE SE GUARDARÁN EN EL HISTORIAL
             datos = {
                 "lecturas_iniciales": {
-                    f"eg{i}": self.obtener(f"eg{i}")
-                    for i in range(1, 5)
+                    **{
+                        f"eg{i}": self.obtener(f"eg{i}")
+                        for i in range(1, 5)
+                    },
+                    **{
+                        f"ed{i}": self.obtener(f"ed{i}")
+                        for i in range(1, 3)
+                    }
                 },
+
                 "lecturas_finales": {
-                    f"sg{i}": self.obtener(f"sg{i}")
-                    for i in range(1, 5)
+                    **{
+                        f"sg{i}": self.obtener(f"sg{i}")
+                        for i in range(1, 5)
+                    },
+                    **{
+                        f"sd{i}": self.obtener(f"sd{i}")
+                        for i in range(1, 3)
+                    }
                 },
-                "diesel_inicial": {
-                    f"ed{i}": self.obtener(f"ed{i}")
-                    for i in range(1, 3)
-                },
-                "diesel_final": {
-                    f"sd{i}": self.obtener(f"sd{i}")
-                    for i in range(1, 3)
-                },
+
                 "gasolina": gasolina,
                 "diesel": diesel,
                 "total_gasolina": total_gasolina,
@@ -575,9 +564,9 @@ class ControlVentasApp(App):
             self.resultado.text = (
                 "[b]RESUMEN DE VENTAS[/b]\n\n"
                 f"Gasolina: {gasolina:.2f} galones\n"
-                f"Diesel: {diesel:.2f} galones\n\n"
+                f"Diésel: {diesel:.2f} galones\n\n"
                 f"Venta gasolina: ${total_gasolina:,.0f}\n"
-                f"Venta diesel: ${total_diesel:,.0f}\n"
+                f"Venta diésel: ${total_diesel:,.0f}\n"
                 f"Aditivos: ${aditivos:,.0f}\n"
                 f"Parqueos: ${total_parqueos:,.0f}\n\n"
                 f"[b]TOTAL VENTAS: ${total_ventas:,.0f}[/b]\n\n"
@@ -588,10 +577,13 @@ class ControlVentasApp(App):
                 f"${total_final:,.0f} COP[/b]"
             )
 
+            self.resultado.markup = True
+
         except (ValueError, TypeError):
             self.mensaje(
                 "Error",
-                "Revise que todos los valores ingresados sean números válidos."
+                "Revise que todos los valores ingresados "
+                "sean números válidos."
             )
 
     # GUARDAR CIERRE
@@ -652,7 +644,8 @@ class ControlVentasApp(App):
             cursor = conexion.cursor()
 
             cursor.execute(
-                "SELECT fecha, datos FROM cierres ORDER BY id DESC LIMIT 50"
+                "SELECT fecha, datos FROM cierres "
+                "ORDER BY id DESC LIMIT 50"
             )
 
             registros = cursor.fetchall()
@@ -671,24 +664,31 @@ class ControlVentasApp(App):
                 datos = json.loads(datos_json)
 
                 texto += (
-                    f"FECHA: {fecha}\n\n"
+                    f"[b]FECHA: {fecha}[/b]\n\n"
                     f"Gasolina: {datos.get('gasolina', 0):.2f} galones\n"
-                    f"Diesel: {datos.get('diesel', 0):.2f} galones\n\n"
-                    f"Venta gasolina: ${datos.get('total_gasolina', 0):,.0f}\n"
-                    f"Venta diesel: ${datos.get('total_diesel', 0):,.0f}\n"
+                    f"Diésel: {datos.get('diesel', 0):.2f} galones\n\n"
+                    f"Venta gasolina: "
+                    f"${datos.get('total_gasolina', 0):,.0f}\n"
+                    f"Venta diésel: "
+                    f"${datos.get('total_diesel', 0):,.0f}\n"
                     f"Aditivos: ${datos.get('aditivos', 0):,.0f}\n"
-                    f"Parqueos: ${datos.get('total_parqueos', 0):,.0f}\n\n"
-                    f"Dinero en monedas: ${datos.get('monedas', 0):,.0f}\n"
-                    f"Venta por datáfono: ${datos.get('datafono', 0):,.0f}\n"
-                    f"Descuento: ${datos.get('descuento', 0):,.0f}\n\n"
-                    f"TOTAL VENTAS: ${datos.get('total_ventas', 0):,.0f}\n"
-                    f"TOTAL A ENTREGAR: ${datos.get('total_final', 0):,.0f} COP\n"
+                    f"Parqueos: "
+                    f"${datos.get('total_parqueos', 0):,.0f}\n\n"
+                    f"Dinero en monedas: "
+                    f"${datos.get('monedas', 0):,.0f}\n"
+                    f"Venta por datáfono: "
+                    f"${datos.get('datafono', 0):,.0f}\n"
+                    f"Descuento: "
+                    f"${datos.get('descuento', 0):,.0f}\n\n"
+                    f"TOTAL VENTAS: "
+                    f"${datos.get('total_ventas', 0):,.0f}\n"
+                    f"[b]TOTAL A ENTREGAR: "
+                    f"${datos.get('total_final', 0):,.0f} COP[/b]\n"
                     "------------------------------------\n\n"
                 )
 
             contenido = BoxLayout(
                 orientation="vertical",
-                spacing=dp(10),
                 padding=dp(12)
             )
 
@@ -698,6 +698,7 @@ class ControlVentasApp(App):
 
             etiqueta = Label(
                 text=texto,
+                markup=True,
                 color=BLANCO,
                 font_size="14sp",
                 halign="left",
@@ -712,7 +713,11 @@ class ControlVentasApp(App):
 
             etiqueta.bind(
                 texture_size=lambda instancia, tamano:
-                setattr(instancia, "height", tamano[1] + dp(20))
+                setattr(
+                    instancia,
+                    "height",
+                    tamano[1] + dp(20)
+                )
             )
 
             scroll.add_widget(etiqueta)
@@ -723,18 +728,5 @@ class ControlVentasApp(App):
                 content=contenido,
                 size_hint=(0.94, 0.85),
                 separator_color=NARANJA,
-                background_color=AZUL_FONDO
-            )
-
-            popup.open()
-
-        except (sqlite3.Error, json.JSONDecodeError) as error:
-            self.mensaje(
-                "Error",
-                f"No se pudo consultar el historial: {error}"
-            )
-
-    # MENSAJES
-    def mensaje(self, titulo, texto):
-        contenido = BoxLayout(
-           
+                background_color=FONDO
+            
