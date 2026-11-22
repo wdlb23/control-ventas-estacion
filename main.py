@@ -1,3 +1,9 @@
+
+import os
+import json
+import sqlite3
+from datetime import datetime
+
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.gridlayout import GridLayout
@@ -6,6 +12,7 @@ from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
 from kivy.uix.button import Button
 from kivy.uix.spinner import Spinner
+from kivy.uix.popup import Popup
 from kivy.core.window import Window
 
 Window.clearcolor = (0.94, 0.96, 0.98, 1)
@@ -16,6 +23,15 @@ class ControlVentasApp(App):
     def build(self):
         self.campos = {}
         self.parqueos = []
+        self.ultimo_calculo = None
+
+        # Crear base de datos SQLite
+        self.db_path = os.path.join(
+            self.user_data_dir,
+            "control_ventas.db"
+        )
+
+        self.inicializar_bd()
 
         scroll = ScrollView()
 
@@ -25,8 +41,9 @@ class ControlVentasApp(App):
             padding=15,
             size_hint_y=None
         )
+
         self.contenedor.bind(
-            minimum_height=self.contenedor.setter('height')
+            minimum_height=self.contenedor.setter("height")
         )
 
         scroll.add_widget(self.contenedor)
@@ -86,9 +103,11 @@ class ControlVentasApp(App):
             spacing=5,
             size_hint_y=None
         )
+
         self.lista_parqueos.bind(
-            minimum_height=self.lista_parqueos.setter('height')
+            minimum_height=self.lista_parqueos.setter("height")
         )
+
         self.contenedor.add_widget(self.lista_parqueos)
 
         self.titulo("FORMAS DE PAGO")
@@ -113,6 +132,7 @@ class ControlVentasApp(App):
             size_hint_y=None,
             height=45
         )
+
         self.contenedor.add_widget(
             self.respuesta_descuento
         )
@@ -127,6 +147,16 @@ class ControlVentasApp(App):
             self.calcular
         )
 
+        self.boton(
+            "GUARDAR CIERRE",
+            self.guardar_cierre
+        )
+
+        self.boton(
+            "VER HISTORIAL",
+            self.ver_historial
+        )
+
         self.resultado = Label(
             text="Aquí aparecerá el resumen de ventas",
             color=(0, 0, 0, 1),
@@ -138,7 +168,33 @@ class ControlVentasApp(App):
 
         return scroll
 
+    # ---------------------------------
+    # BASE DE DATOS SQLITE
+    # ---------------------------------
+
+    def inicializar_bd(self):
+
+        conexion = sqlite3.connect(self.db_path)
+
+        cursor = conexion.cursor()
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS cierres (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                fecha TEXT NOT NULL,
+                datos TEXT NOT NULL
+            )
+        """)
+
+        conexion.commit()
+        conexion.close()
+
+    # ---------------------------------
+    # ELEMENTOS DE INTERFAZ
+    # ---------------------------------
+
     def titulo(self, texto):
+
         etiqueta = Label(
             text=texto,
             bold=True,
@@ -146,9 +202,11 @@ class ControlVentasApp(App):
             size_hint_y=None,
             height=45
         )
+
         self.contenedor.add_widget(etiqueta)
 
     def agregar_campo(self, nombre, clave):
+
         caja = BoxLayout(
             orientation="vertical",
             size_hint_y=None,
@@ -175,9 +233,11 @@ class ControlVentasApp(App):
         caja.add_widget(entrada)
 
         self.contenedor.add_widget(caja)
+
         self.campos[clave] = entrada
 
     def boton(self, texto, funcion):
+
         btn = Button(
             text=texto,
             size_hint_y=None,
@@ -185,17 +245,28 @@ class ControlVentasApp(App):
             background_normal="",
             background_color=(0.05, 0.40, 0.65, 1)
         )
+
         btn.bind(on_press=funcion)
+
         self.contenedor.add_widget(btn)
 
     def obtener(self, clave):
+
         valor = self.campos[clave].text.strip()
+
         if valor == "":
             return 0
+
         return float(valor)
 
+    # ---------------------------------
+    # REGISTRO DE PARQUEOS
+    # ---------------------------------
+
     def crear_parqueos(self, instancia):
+
         try:
+
             cantidad = int(
                 self.obtener("cantidad_parqueos")
             )
@@ -207,6 +278,7 @@ class ControlVentasApp(App):
             self.parqueos = []
 
             for i in range(1, cantidad + 1):
+
                 caja = BoxLayout(
                     orientation="vertical",
                     size_hint_y=None,
@@ -229,24 +301,37 @@ class ControlVentasApp(App):
                 )
 
                 caja.add_widget(entrada)
+
                 self.lista_parqueos.add_widget(caja)
+
                 self.parqueos.append(entrada)
 
         except ValueError:
-            self.resultado.text = "Ingrese una cantidad valida de parqueos."
+
+            self.resultado.text = (
+                "Ingrese una cantidad valida de parqueos."
+            )
+
+    # ---------------------------------
+    # CALCULAR VENTAS
+    # ---------------------------------
 
     def calcular(self, instancia):
+
         try:
+
             gasolina = 0
             diesel = 0
 
             for i in range(1, 5):
+
                 gasolina += abs(
                     self.obtener(f"sg{i}") -
                     self.obtener(f"eg{i}")
                 )
 
             for i in range(1, 3):
+
                 diesel += abs(
                     self.obtener(f"sd{i}") -
                     self.obtener(f"ed{i}")
@@ -257,10 +342,12 @@ class ControlVentasApp(App):
 
             aditivos = self.obtener("aditivos")
 
-            total_parqueos = sum(
+            valores_parqueos = [
                 float(p.text) if p.text.strip() else 0
                 for p in self.parqueos
-            )
+            ]
+
+            total_parqueos = sum(valores_parqueos)
 
             total_ventas = (
                 total_gasolina +
@@ -284,6 +371,27 @@ class ControlVentasApp(App):
                 descuento
             )
 
+            # Preparar datos para guardar
+            self.ultimo_calculo = {
+                "lecturas": {
+                    clave: self.obtener(clave)
+                    for clave in self.campos
+                    if clave.startswith(("eg", "ed", "sg", "sd"))
+                },
+                "gasolina": gasolina,
+                "diesel": diesel,
+                "total_gasolina": total_gasolina,
+                "total_diesel": total_diesel,
+                "aditivos": aditivos,
+                "parqueos": valores_parqueos,
+                "total_parqueos": total_parqueos,
+                "total_ventas": total_ventas,
+                "monedas": monedas,
+                "datafono": datafono,
+                "descuento": descuento,
+                "total_final": total_final
+            }
+
             self.resultado.text = (
                 "RESUMEN DE VENTAS\n\n"
                 f"Gasolina: {gasolina:.2f} galones\n"
@@ -301,11 +409,180 @@ class ControlVentasApp(App):
             )
 
         except ValueError:
+
+            self.ultimo_calculo = None
+
             self.resultado.text = (
                 "Error: revise que todos los valores "
                 "ingresados sean numeros validos."
             )
 
+    # ---------------------------------
+    # GUARDAR CIERRE EN SQLITE
+    # ---------------------------------
+
+    def guardar_cierre(self, instancia):
+
+        if self.ultimo_calculo is None:
+
+            self.mensaje(
+                "Primero debe calcular las ventas."
+            )
+
+            return
+
+        try:
+
+            fecha = datetime.now().strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
+
+            datos = json.dumps(
+                self.ultimo_calculo,
+                ensure_ascii=False
+            )
+
+            conexion = sqlite3.connect(self.db_path)
+
+            cursor = conexion.cursor()
+
+            cursor.execute(
+                """
+                INSERT INTO cierres (fecha, datos)
+                VALUES (?, ?)
+                """,
+                (fecha, datos)
+            )
+
+            conexion.commit()
+            conexion.close()
+
+            self.mensaje(
+                "El cierre se guardo correctamente."
+            )
+
+        except Exception as error:
+
+            self.mensaje(
+                f"No se pudo guardar el cierre:\n{error}"
+            )
+
+    # ---------------------------------
+    # CONSULTAR HISTORIAL
+    # ---------------------------------
+
+    def ver_historial(self, instancia):
+
+        conexion = sqlite3.connect(self.db_path)
+
+        cursor = conexion.cursor()
+
+        cursor.execute(
+            """
+            SELECT id, fecha, datos
+            FROM cierres
+            ORDER BY id DESC
+            LIMIT 50
+            """
+        )
+
+        registros = cursor.fetchall()
+
+        conexion.close()
+
+        if not registros:
+
+            texto = "Todavia no hay cierres guardados."
+
+        else:
+
+            texto = ""
+
+            for registro in registros:
+
+                identificador = registro[0]
+                fecha = registro[1]
+                datos = json.loads(registro[2])
+
+                texto += (
+                    f"CIERRE #{identificador}\n"
+                    f"Fecha: {fecha}\n"
+                    f"Gasolina: {datos['gasolina']:.2f} galones\n"
+                    f"Diesel: {datos['diesel']:.2f} galones\n"
+                    f"Total: ${datos['total_final']:,.0f} COP\n"
+                    "----------------------------\n\n"
+                )
+
+        contenido = BoxLayout(
+            orientation="vertical",
+            padding=10,
+            spacing=10
+        )
+
+        campo = TextInput(
+            text=texto,
+            readonly=True,
+            multiline=True,
+            size_hint_y=1
+        )
+
+        cerrar = Button(
+            text="CERRAR",
+            size_hint_y=None,
+            height=50
+        )
+
+        contenido.add_widget(campo)
+        contenido.add_widget(cerrar)
+
+        ventana = Popup(
+            title="HISTORIAL DE CIERRES",
+            content=contenido,
+            size_hint=(0.95, 0.85)
+        )
+
+        cerrar.bind(
+            on_press=ventana.dismiss
+        )
+
+        ventana.open()
+
+    # ---------------------------------
+    # MENSAJES
+    # ---------------------------------
+
+    def mensaje(self, texto):
+
+        contenido = BoxLayout(
+            orientation="vertical",
+            padding=10,
+            spacing=10
+        )
+
+        etiqueta = Label(text=texto)
+
+        cerrar = Button(
+            text="ACEPTAR",
+            size_hint_y=None,
+            height=45
+        )
+
+        contenido.add_widget(etiqueta)
+        contenido.add_widget(cerrar)
+
+        ventana = Popup(
+            title="CONTROL DE VENTAS",
+            content=contenido,
+            size_hint=(0.85, 0.35)
+        )
+
+        cerrar.bind(
+            on_press=ventana.dismiss
+        )
+
+        ventana.open()
+
 
 if __name__ == "__main__":
     ControlVentasApp().run()
+        
