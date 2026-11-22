@@ -1,3 +1,4 @@
+
 [app]
 
 title = Control de Ventas
@@ -16,10 +17,13 @@ fullscreen = 0
 
 android.permissions = INTERNET
 
-android.api = 35
+android.api = 36
 android.minapi = 24
-android.ndk = 27b
+android.accept_sdk_license = True
+
 android.archs = arm64-v8a
+
+p4a.branch = master
 
 [buildozer]
 
